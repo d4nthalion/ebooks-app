@@ -1,0 +1,7 @@
+[
+  {
+    "username": "invitado",
+    "passwordHash": "$2a$10$REEMPLAZA.ESTE.HASH.GENERADO.CON.BCryptPasswordEncoder",
+    "roles": ["ROLE_USER"]
+  }
+]

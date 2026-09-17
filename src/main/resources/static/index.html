@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Biblioteca</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>📚 Biblioteca</h1>
+    <input id="search" type="search" placeholder="Buscar por titulo o autor..." />
+    <button id="refreshBtn" title="Reescanear la carpeta">⟳ Reescanear</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Autores</h2>
+      <ul id="authorList" class="filter-list"></ul>
+      <h2>Sagas</h2>
+      <ul id="seriesList" class="filter-list"></ul>
+    </aside>
+
+    <main>
+      <p id="status" class="status"></p>
+      <div id="grid" class="grid"></div>
+      <p id="empty" class="empty" hidden>No se encontraron libros.</p>
+    </main>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay" hidden>
+    <div class="modal">
+      <button id="modalClose" class="modal-close">&times;</button>
+      <div class="modal-content">
+        <img id="modalCover" class="modal-cover" alt="Portada" />
+        <div class="modal-info">
+          <h2 id="modalTitle"></h2>
+          <p id="modalAuthor" class="modal-author"></p>
+          <p id="modalSeries" class="modal-series"></p>
+          <p id="modalMeta" class="modal-meta"></p>
+          <a id="modalDownload" class="download-btn" href="#">⬇ Descargar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
