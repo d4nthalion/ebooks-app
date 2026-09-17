@@ -11,6 +11,7 @@
     <h1>📚 Biblioteca</h1>
     <input id="search" type="search" placeholder="Buscar por titulo o autor..." />
     <button id="refreshBtn" title="Reescanear la carpeta">⟳ Reescanear</button>
+    <button id="settingsBtn" title="Configurar email de Kindle">⚙ Kindle</button>
   </header>
 
   <div class="layout">
@@ -38,8 +39,30 @@
           <p id="modalAuthor" class="modal-author"></p>
           <p id="modalSeries" class="modal-series"></p>
           <p id="modalMeta" class="modal-meta"></p>
-          <a id="modalDownload" class="download-btn" href="#">⬇ Descargar</a>
+          <div class="modal-actions">
+            <a id="modalDownload" class="download-btn" href="#">⬇ Descargar</a>
+            <button id="modalSendKindle" class="kindle-btn">📧 Enviar a Kindle</button>
+          </div>
+          <p id="modalKindleStatus" class="kindle-status" hidden></p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsOverlay" class="modal-overlay" hidden>
+    <div class="modal settings-modal">
+      <button id="settingsClose" class="modal-close">&times;</button>
+      <div class="settings-content">
+        <h2>Email de Kindle</h2>
+        <p class="modal-meta">
+          Recuerda anadir el remitente de esta app a tu
+          <em>Lista de correo aprobada</em> en la configuracion de Amazon,
+          o los envios seran rechazados.
+        </p>
+        <label for="kindleEmailInput">Tu direccion @kindle.com</label>
+        <input id="kindleEmailInput" type="email" placeholder="tunombre@kindle.com" />
+        <button id="kindleEmailSave" class="download-btn">Guardar</button>
+        <p id="settingsStatus" class="kindle-status" hidden></p>
       </div>
     </div>
   </div>

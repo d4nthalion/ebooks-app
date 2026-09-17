@@ -204,6 +204,44 @@ main { flex: 1; min-width: 0; }
   color: #fff;
   text-decoration: none;
   font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.kindle-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.kindle-btn:hover { border-color: var(--accent); }
+.kindle-btn:disabled { opacity: 0.6; cursor: default; }
+
+.kindle-status { font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0; }
+
+.settings-modal { max-width: 380px; }
+.settings-content { padding: 24px; }
+.settings-content h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.settings-content label { display: block; font-size: 0.85rem; color: var(--text-muted); margin: 12px 0 4px; }
+.settings-content input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  margin-bottom: 12px;
 }
 
 [hidden] { display: none !important; }

@@ -20,7 +20,17 @@ const el = {
   modalSeries: document.getElementById("modalSeries"),
   modalMeta: document.getElementById("modalMeta"),
   modalDownload: document.getElementById("modalDownload"),
+  modalSendKindle: document.getElementById("modalSendKindle"),
+  modalKindleStatus: document.getElementById("modalKindleStatus"),
+  settingsBtn: document.getElementById("settingsBtn"),
+  settingsOverlay: document.getElementById("settingsOverlay"),
+  settingsClose: document.getElementById("settingsClose"),
+  kindleEmailInput: document.getElementById("kindleEmailInput"),
+  kindleEmailSave: document.getElementById("kindleEmailSave"),
+  settingsStatus: document.getElementById("settingsStatus"),
 };
+
+let currentBookId = null;
 
 function formatSize(bytes) {
   if (!bytes) return "";
@@ -132,6 +142,7 @@ function renderGrid(books) {
 }
 
 function openModal(book) {
+  currentBookId = book.id;
   el.modalTitle.textContent = book.title;
   el.modalAuthor.textContent = book.author ?? "";
   el.modalSeries.textContent = book.series ? `Saga: ${book.series}` : "";
@@ -139,8 +150,68 @@ function openModal(book) {
   el.modalCover.src = book.hasCover ? `/api/books/${book.id}/cover` : "";
   el.modalCover.style.visibility = book.hasCover ? "visible" : "hidden";
   el.modalDownload.href = `/api/books/${book.id}/download`;
+  el.modalKindleStatus.hidden = true;
+  el.modalSendKindle.disabled = false;
+  el.modalSendKindle.textContent = "📧 Enviar a Kindle";
   el.modalOverlay.hidden = false;
 }
+
+async function sendCurrentBookToKindle() {
+  if (!currentBookId) return;
+  el.modalSendKindle.disabled = true;
+  el.modalSendKindle.textContent = "Enviando...";
+  el.modalKindleStatus.hidden = true;
+  try {
+    const res = await fetch(`/api/books/${currentBookId}/send-to-kindle`, { method: "POST" });
+    const data = await res.json();
+    el.modalKindleStatus.textContent = res.ok ? `Enviado: ${data.status}` : data.error ?? "No se pudo enviar";
+    el.modalKindleStatus.hidden = false;
+  } catch {
+    el.modalKindleStatus.textContent = "No se pudo enviar (error de red)";
+    el.modalKindleStatus.hidden = false;
+  } finally {
+    el.modalSendKindle.disabled = false;
+    el.modalSendKindle.textContent = "📧 Enviar a Kindle";
+  }
+}
+
+el.modalSendKindle.addEventListener("click", sendCurrentBookToKindle);
+
+async function openSettings() {
+  el.settingsStatus.hidden = true;
+  try {
+    const { email } = await fetchJson("/api/me/kindle-email");
+    el.kindleEmailInput.value = email;
+  } catch {
+    el.kindleEmailInput.value = "";
+  }
+  el.settingsOverlay.hidden = false;
+}
+
+function closeSettings() {
+  el.settingsOverlay.hidden = true;
+}
+
+el.settingsBtn.addEventListener("click", openSettings);
+el.settingsClose.addEventListener("click", closeSettings);
+el.settingsOverlay.addEventListener("click", (e) => {
+  if (e.target === el.settingsOverlay) closeSettings();
+});
+
+el.kindleEmailSave.addEventListener("click", async () => {
+  el.kindleEmailSave.disabled = true;
+  try {
+    await fetch("/api/me/kindle-email", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: el.kindleEmailInput.value.trim() }),
+    });
+    el.settingsStatus.textContent = "Guardado.";
+    el.settingsStatus.hidden = false;
+  } finally {
+    el.kindleEmailSave.disabled = false;
+  }
+});
 
 function closeModal() {
   el.modalOverlay.hidden = true;

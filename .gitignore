@@ -38,6 +38,8 @@ build/
 # Override local de configuracion (URL real del NAS, etc.) - Spring Boot lo carga automaticamente si existe
 /application.properties
 /application-local.properties
+# Emails de Kindle por usuario
+/user-kindle-emails.json
 
 ### SO ###
 .DS_Store
