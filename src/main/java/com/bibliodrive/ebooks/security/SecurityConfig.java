@@ -46,7 +46,7 @@ public class SecurityConfig {
         http
                 .authenticationManager(authenticationManager)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login.html", "/styles.css").permitAll()
+                        .requestMatchers("/login.html", "/styles.css", "/theme.js").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login.html")
