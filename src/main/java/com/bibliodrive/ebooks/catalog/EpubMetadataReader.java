@@ -119,6 +119,19 @@ public class EpubMetadataReader {
                 }
             }
 
+            // Ultimo recurso (EPUBs de Sigil sin metadato de portada): una
+            // imagen del manifiesto llamada "cover"/"portada".
+            if (coverHref == null) {
+                for (String[] value : manifest.values()) {
+                    String name = value[0].substring(value[0].lastIndexOf('/') + 1).toLowerCase(java.util.Locale.ROOT);
+                    if ((name.contains("cover") || name.contains("portada"))
+                            && name.matches(".*\\.(jpe?g|png|gif|webp)$")) {
+                        coverHref = value[0];
+                        break;
+                    }
+                }
+            }
+
             if (coverHref == null) {
                 return null;
             }
