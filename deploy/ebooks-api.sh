@@ -11,6 +11,8 @@
 #
 # Uso manual por SSH:
 #   ./ebooks-api.sh start|stop|restart|status
+#   ./ebooks-api.sh blocked              (quien esta bloqueado por logins fallidos)
+#   ./ebooks-api.sh unblock <usuario|ip>
 
 set -u
 
@@ -30,6 +32,7 @@ PIDFILE="$APP_DIR/ebooks-api.pid"
 LOGDIR="$APP_DIR/logs"
 LOGFILE="$LOGDIR/app-$(date +%Y%m%d-%H%M%S).log"
 KEEP_LOGS=10
+PORT=8081
 # ----------------------------------------------------------------------------
 
 mkdir -p "$LOGDIR"
@@ -91,10 +94,26 @@ status() {
     fi
 }
 
+# Bloqueos de login (LoginAttemptService). La ruta /internal solo responde
+# a peticiones desde el propio NAS.
+blocked() {
+    curl -s "http://localhost:$PORT/internal/login-blocks"
+}
+
+unblock() {
+    if [ -z "${1:-}" ]; then
+        echo "Uso: $0 unblock <usuario|ip>" >&2
+        exit 1
+    fi
+    curl -s -X POST --data-urlencode "key=$1" "http://localhost:$PORT/internal/login-blocks/unblock"
+}
+
 case "${1:-start}" in
     start)   start ;;
     stop)    stop ;;
     restart) stop; start ;;
     status)  status ;;
-    *) echo "Uso: $0 {start|stop|restart|status}" >&2; exit 1 ;;
+    blocked) blocked ;;
+    unblock) unblock "${2:-}" ;;
+    *) echo "Uso: $0 {start|stop|restart|status|blocked|unblock <usuario|ip>}" >&2; exit 1 ;;
 esac
