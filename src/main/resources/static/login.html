@@ -13,6 +13,7 @@
     <div class="login-box">
       <h1>📚 Biblioteca</h1>
       <div id="errorBox" class="login-error" hidden>Usuario o contrasena incorrectos.</div>
+      <div id="blockedBox" class="login-error" hidden>Demasiados intentos fallidos. Prueba de nuevo en 15 minutos.</div>
       <form action="/login" method="post">
         <label for="username">Usuario</label>
         <input id="username" name="username" type="text" autocomplete="username" required autofocus />
@@ -23,8 +24,12 @@
     </div>
   </div>
   <script>
-    if (new URLSearchParams(location.search).has("error")) {
+    const params = new URLSearchParams(location.search);
+    if (params.has("error")) {
       document.getElementById("errorBox").hidden = false;
+    }
+    if (params.has("blocked")) {
+      document.getElementById("blockedBox").hidden = false;
     }
     initThemeToggle(document.getElementById("themeToggle"));
   </script>
