@@ -30,7 +30,7 @@ const el = {
   settingsStatus: document.getElementById("settingsStatus"),
   modalEditActions: document.getElementById("modalEditActions"),
   modalEdit: document.getElementById("modalEdit"),
-  modalCoverBtn: document.getElementById("modalCover"),
+  modalCoverBtn: document.getElementById("modalCoverBtn"),
   editForm: document.getElementById("editForm"),
   editTitle: document.getElementById("editTitle"),
   editAuthor: document.getElementById("editAuthor"),
