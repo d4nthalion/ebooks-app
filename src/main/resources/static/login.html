@@ -3,34 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Biblioteca - Iniciar sesion</title>
+  <title>Entrar - Biblioteca</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="theme.js"></script>
 </head>
 <body>
-  <div class="login-wrap">
-    <button id="themeToggle" class="login-theme-toggle" aria-label="Cambiar tema"></button>
-    <div class="login-box">
-      <h1>📚 Biblioteca</h1>
-      <div id="errorBox" class="login-error" hidden>Usuario o contrasena incorrectos.</div>
-      <div id="blockedBox" class="login-error" hidden>Demasiados intentos fallidos. Prueba de nuevo en 15 minutos.</div>
-      <form action="/login" method="post">
-        <label for="username">Usuario</label>
-        <input id="username" name="username" type="text" autocomplete="username" required autofocus />
-        <label for="password">Contrasena</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required />
-        <button type="submit">Entrar</button>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 32 32"><path d="M16 8.5C13 6.3 9 5.5 4 6v18c5-.5 9 .3 12 2.5 3-2.2 7-3 12-2.5V6c-5-.5-9 .3-12 2.5Z" fill="currentColor" fill-opacity=".14"/><path d="M16 8.5V26.5"/></symbol>
+  </svg>
+
+  <button id="themeToggle" class="tool-btn login-theme" type="button"></button>
+
+  <main class="login-page">
+    <div class="login-card">
+      <h1 class="brand">
+        <svg class="brand-mark icon" style="color: var(--accent); stroke-width: 1.6" aria-hidden="true"><use href="#i-book"/></svg>
+        Biblioteca
+      </h1>
+      <p class="login-lead">Entra con tu cuenta del NAS.</p>
+
+      <div id="errorBox" class="alert" role="alert" hidden>El usuario o la contraseña no son correctos.</div>
+      <div id="blockedBox" class="alert" role="alert" hidden>Demasiados intentos fallidos. Vuelve a probar dentro de 15 minutos.</div>
+
+      <form action="/login" method="post" class="form-grid">
+        <div class="field">
+          <label for="username">Usuario</label>
+          <input id="username" class="input" name="username" type="text" autocomplete="username" required autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <input id="password" class="input" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn btn-primary" type="submit">Entrar</button>
       </form>
     </div>
-  </div>
+  </main>
+
   <script>
     const params = new URLSearchParams(location.search);
-    if (params.has("error")) {
-      document.getElementById("errorBox").hidden = false;
-    }
-    if (params.has("blocked")) {
-      document.getElementById("blockedBox").hidden = false;
-    }
+    document.getElementById("errorBox").hidden = !params.has("error");
+    document.getElementById("blockedBox").hidden = !params.has("blocked");
     initThemeToggle(document.getElementById("themeToggle"));
   </script>
 </body>

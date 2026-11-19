@@ -1,8 +1,16 @@
 (function () {
+  function stored() {
+    try {
+      return localStorage.getItem("theme");
+    } catch {
+      return null;
+    }
+  }
+
   function effectiveTheme() {
-    const stored = localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark") return stored;
-    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const value = stored();
+    if (value === "light" || value === "dark") return value;
+    return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
   }
 
   function apply(theme) {
@@ -14,13 +22,20 @@
 
   window.initThemeToggle = function (buttonEl) {
     function render() {
-      const current = document.documentElement.getAttribute("data-theme");
-      buttonEl.textContent = current === "dark" ? "☀" : "🌙";
-      buttonEl.title = current === "dark" ? "Cambiar a claro" : "Cambiar a oscuro";
+      const dark = document.documentElement.getAttribute("data-theme") === "dark";
+      const label = dark ? "Usar tema claro" : "Usar tema oscuro";
+      buttonEl.innerHTML =
+        `<svg class="icon" aria-hidden="true"><use href="#${dark ? "i-sun" : "i-moon"}"/></svg>` +
+        `<span class="visually-hidden">${label}</span>`;
+      buttonEl.title = label;
     }
     buttonEl.addEventListener("click", () => {
       const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      localStorage.setItem("theme", next);
+      try {
+        localStorage.setItem("theme", next);
+      } catch {
+        /* sin almacenamiento: el cambio dura hasta recargar */
+      }
       apply(next);
       render();
     });

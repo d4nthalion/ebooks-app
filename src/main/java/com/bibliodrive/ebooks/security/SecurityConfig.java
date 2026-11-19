@@ -49,7 +49,7 @@ public class SecurityConfig {
         http
                 .authenticationManager(authenticationManager)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login.html", "/styles.css", "/theme.js").permitAll()
+                        .requestMatchers("/login.html", "/styles.css", "/theme.js", "/fonts/**").permitAll()
                         // Solo desde el propio NAS. Lo que entra por el tunel trae la IP real
                         // (forward-headers native) y cabeceras de Cloudflare, asi que no cuela.
                         .requestMatchers("/internal/**").access((authentication, context) ->
