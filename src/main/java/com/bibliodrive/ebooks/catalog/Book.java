@@ -5,6 +5,7 @@ public record Book(
         String title,
         String author,
         String series,
+        String seriesIndex,
         String fileName,
         String relativePath,
         String extension,

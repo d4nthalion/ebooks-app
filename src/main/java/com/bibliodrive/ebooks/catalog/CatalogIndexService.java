@@ -83,33 +83,10 @@ public class CatalogIndexService {
                     continue;
                 }
 
-                Path relative = rootPath.relativize(file);
-                String id = hashOf(relative.toString());
-
-                String title = fileNameWithoutExtension(file);
-                String author = inferAuthor(relative);
-                String series = inferSeries(relative);
-                EpubMetadataReader.CoverImage cover = null;
-
-                if ("epub".equals(extension)) {
-                    EpubMetadataReader.EpubMetadata meta = epubReader.read(file);
-                    if (meta.title() != null && !meta.title().isBlank()) {
-                        title = meta.title();
-                    }
-                    if (meta.author() != null && !meta.author().isBlank()) {
-                        author = meta.author();
-                    }
-                    cover = meta.cover();
-                }
-
-                long size = Files.size(file);
-                long modified = Files.getLastModifiedTime(file).toMillis();
-
-                Book book = new Book(id, title, author, series, file.getFileName().toString(),
-                        relative.toString(), extension, size, modified, cover != null);
-                newBooks.put(id, book);
-                if (cover != null) {
-                    newCovers.put(id, cover);
+                Indexed indexed = index(file, extension);
+                newBooks.put(indexed.book().id(), indexed.book());
+                if (indexed.cover() != null) {
+                    newCovers.put(indexed.book().id(), indexed.cover());
                 }
             }
         } catch (IOException e) {
@@ -123,6 +100,72 @@ public class CatalogIndexService {
         log.info("Indexados {} libros desde {}", newBooks.size(), rootPath);
     }
 
+    private record Indexed(Book book, EpubMetadataReader.CoverImage cover) {
+    }
+
+    private Indexed index(Path file, String extension) throws IOException {
+        Path relative = rootPath.relativize(file);
+        String id = hashOf(relative.toString());
+
+        String title = fileNameWithoutExtension(file);
+        String author = inferAuthor(relative);
+        String series = inferSeries(relative);
+        String seriesIndex = null;
+        EpubMetadataReader.CoverImage cover = null;
+
+        if ("epub".equals(extension)) {
+            EpubMetadataReader.EpubMetadata meta = epubReader.read(file);
+            if (meta.title() != null && !meta.title().isBlank()) {
+                title = meta.title();
+            }
+            if (meta.author() != null && !meta.author().isBlank()) {
+                author = meta.author();
+            }
+            // La saga escrita en el epub (Calibre o esta app) manda sobre la carpeta
+            if (meta.series() != null) {
+                series = meta.series();
+                seriesIndex = meta.seriesIndex();
+            }
+            cover = meta.cover();
+        }
+
+        long size = Files.size(file);
+        long modified = Files.getLastModifiedTime(file).toMillis();
+
+        Book book = new Book(id, title, author, series, seriesIndex, file.getFileName().toString(),
+                relative.toString(), extension, size, modified, cover != null);
+        return new Indexed(book, cover);
+    }
+
+    /**
+     * Vuelve a leer un solo libro (tras modificar su fichero) sin reescanear toda
+     * la carpeta. Devuelve el libro actualizado.
+     */
+    public synchronized Optional<Book> reindex(String id) {
+        Book current = booksById.get(id);
+        if (current == null) {
+            return Optional.empty();
+        }
+        Path file = resolveFile(current);
+        try {
+            Indexed indexed = index(file, current.extension());
+            Map<String, Book> books = new LinkedHashMap<>(booksById);
+            Map<String, EpubMetadataReader.CoverImage> covers = new HashMap<>(coversById);
+            books.put(id, indexed.book());
+            if (indexed.cover() != null) {
+                covers.put(id, indexed.cover());
+            } else {
+                covers.remove(id);
+            }
+            this.booksById = books;
+            this.coversById = covers;
+            return Optional.of(indexed.book());
+        } catch (IOException e) {
+            log.error("Error reindexando {}", file, e);
+            return Optional.of(current);
+        }
+    }
+
     public List<Book> findAll(String search, String author, String series) {
         String searchLower = search == null ? null : search.toLowerCase(java.util.Locale.ROOT);
         return booksById.values().stream()
@@ -133,8 +176,20 @@ public class CatalogIndexService {
                 .filter(b -> series == null || series.isBlank() || series.equalsIgnoreCase(b.series()))
                 .sorted(Comparator.comparing(Book::author, Comparator.nullsLast(String::compareToIgnoreCase))
                         .thenComparing(Book::series, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparing(CatalogIndexService::seriesPosition, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(Book::title, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .toList();
+    }
+
+    private static java.math.BigDecimal seriesPosition(Book book) {
+        if (book.seriesIndex() == null) {
+            return null;
+        }
+        try {
+            return new java.math.BigDecimal(book.seriesIndex());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public Optional<Book> findById(String id) {
@@ -153,8 +208,8 @@ public class CatalogIndexService {
         return booksById.values().stream()
                 .map(Book::author)
                 .filter(Objects::nonNull)
-                .distinct()
-                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(java.util.stream.Collectors.toCollection(() -> new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER)))
+                .stream()
                 .toList();
     }
 
@@ -163,8 +218,8 @@ public class CatalogIndexService {
                 .filter(b -> author == null || author.isBlank() || author.equalsIgnoreCase(b.author()))
                 .map(Book::series)
                 .filter(Objects::nonNull)
-                .distinct()
-                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(java.util.stream.Collectors.toCollection(() -> new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER)))
+                .stream()
                 .toList();
     }
 

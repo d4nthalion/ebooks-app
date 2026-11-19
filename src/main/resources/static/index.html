@@ -45,11 +45,75 @@
             <a id="modalDownload" class="download-btn" href="#">⬇ Descargar</a>
             <button id="modalSendKindle" class="kindle-btn">📧 Enviar a Kindle</button>
           </div>
+          <div class="modal-actions" id="modalEditActions">
+            <button id="modalEdit" class="kindle-btn">✎ Editar datos</button>
+            <button id="modalCover" class="kindle-btn">🖼 Cambiar portada</button>
+          </div>
           <p id="modalKindleStatus" class="kindle-status" hidden></p>
         </div>
       </div>
+
+      <form id="editForm" class="edit-form" hidden>
+        <label for="editTitle">Titulo</label>
+        <input id="editTitle" type="text" required />
+        <label for="editAuthor">Autor</label>
+        <input id="editAuthor" type="text" list="authorOptions" required />
+        <div class="edit-row">
+          <div class="edit-grow">
+            <label for="editSeries">Saga <span class="hint">(vacio = sin saga)</span></label>
+            <input id="editSeries" type="text" list="seriesOptions" />
+          </div>
+          <div class="edit-index">
+            <label for="editSeriesIndex">N.º</label>
+            <input id="editSeriesIndex" type="text" inputmode="decimal" placeholder="1" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" id="editSave" class="download-btn">Guardar</button>
+          <button type="button" id="editCancel" class="kindle-btn">Cancelar</button>
+        </div>
+        <p id="editStatus" class="kindle-status" hidden></p>
+      </form>
     </div>
   </div>
+
+  <div id="coverOverlay" class="modal-overlay" hidden>
+    <div class="modal cover-modal">
+      <button id="coverClose" class="modal-close" aria-label="Cerrar">&times;</button>
+      <div class="settings-content">
+        <h2>Cambiar portada</h2>
+        <form id="coverSearchForm" class="cover-search">
+          <input id="coverQuery" type="search" placeholder="Titulo y autor" />
+          <button type="submit" class="download-btn">Buscar</button>
+        </form>
+        <p class="modal-meta">
+          Portadas de <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>,
+          primero las ediciones en espanol. O
+          <label class="upload-link"><input id="coverFile" type="file" accept="image/jpeg,image/png" hidden />sube una imagen</label>
+          desde tu equipo.
+        </p>
+        <p id="coverStatus" class="kindle-status" hidden></p>
+        <div id="coverResults" class="cover-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="renameOverlay" class="modal-overlay" hidden>
+    <div class="modal settings-modal">
+      <button id="renameClose" class="modal-close" aria-label="Cerrar">&times;</button>
+      <form id="renameForm" class="settings-content">
+        <h2 id="renameTitle"></h2>
+        <p id="renameInfo" class="modal-meta"></p>
+        <label for="renameInput">Nuevo nombre</label>
+        <input id="renameInput" type="text" />
+        <button type="submit" id="renameSave" class="download-btn">Cambiar en todos</button>
+        <p id="renameStatus" class="kindle-status" hidden></p>
+      </form>
+    </div>
+  </div>
+
+  <datalist id="authorOptions"></datalist>
+  <datalist id="seriesOptions"></datalist>
 
   <div id="settingsOverlay" class="modal-overlay" hidden>
     <div class="modal settings-modal">
