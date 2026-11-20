@@ -687,6 +687,8 @@ select.input { padding-right: 32px; }
 .kind::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--k); }
 .k-session { --k: #9fc3ff; } .k-download { --k: var(--ok); } .k-kindle { --k: var(--warn); } .k-edit { --k: var(--accent); }
 .k-request { --k: #f0a6d8; } .k-amule { --k: #7fdbd0; } .k-error { --k: var(--danger); }
+.k-read { --k: #c4b5fd; }
+:root[data-theme="light"] .k-read { --k: #6d28d9; }
 :root[data-theme="light"] .k-session { --k: #1d5fb8; } :root[data-theme="light"] .k-request { --k: #a8337a; } :root[data-theme="light"] .k-amule { --k: #0f766e; }
 .ellipsis { max-width: 520px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 26px; padding: 14px 20px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); margin: 0 var(--gutter) 24px; color: var(--text-2); font-size: 14px; }
@@ -815,3 +817,74 @@ dialog[open] { animation: dialog-in 0.22s var(--ease); }
   .boxset, .volume-row, .panel { border: 1px solid CanvasText; }
   .btn-grad, .btn-white { border: 1px solid ButtonText; }
 }
+
+/* ---------- Lectura: marcas en las portadas ---------- */
+
+.read-badge {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--grad); color: var(--grad-ink); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.read-progress { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; height: 5px; background: rgba(0, 0, 0, 0.55); }
+.read-progress i { display: block; height: 100%; background: var(--grad); }
+.read-chip { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
+.vr-read { color: var(--accent); font-weight: 600; }
+.round.on { background: var(--grad) border-box; border-color: transparent; color: var(--grad-ink); }
+
+/* ---------- Lector de epub ---------- */
+
+body.reading { overflow: hidden; }
+.reader {
+  --rbg: #14161d; --rfg: #d6d8df;
+  position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column;
+  background: var(--rbg); color: var(--rfg); animation: fadeReader 0.25s ease;
+}
+@keyframes fadeReader { from { opacity: 0; } }
+.reader-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rfg) 12%, transparent); }
+.reader-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; padding: 0 6px; }
+.reader-title b { font-family: var(--serif); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reader-chapter { font-size: 12px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reader-btn {
+  width: 40px; height: 40px; flex: none; border: 0; border-radius: 10px; display: grid; place-items: center;
+  background: transparent; color: inherit; cursor: pointer; opacity: 0.8;
+}
+.reader-btn:hover { opacity: 1; background: color-mix(in srgb, var(--rfg) 10%, transparent); }
+.reader-btn.on { opacity: 1; color: #032623; background: linear-gradient(135deg, #2dd4bf, #22d3ee); }
+.reader-btn .aa { font-family: var(--serif); font-weight: 700; font-size: 17px; }
+.reader-stage { position: relative; flex: 1; min-height: 0; display: flex; }
+.reader-viewer { flex: 1; min-width: 0; height: 100%; padding: 18px 0; }
+.reader-turn {
+  flex: none; width: clamp(40px, 6vw, 80px); border: 0; background: transparent; color: inherit;
+  display: grid; place-items: center; cursor: pointer; opacity: 0.25; transition: opacity 0.2s;
+}
+.reader-turn:hover, .reader-turn:focus-visible { opacity: 0.85; }
+.reader-turn .icon { width: 30px; height: 30px; }
+.reader-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 16px; background: var(--rbg); }
+.reader-foot { display: flex; align-items: center; gap: 14px; padding: 10px 20px 14px; font-size: 13px; }
+.reader-pct { min-width: 46px; text-align: right; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.reader-slider { flex: 1; accent-color: #2dd4bf; }
+.reader-panel {
+  position: absolute; top: 0; bottom: 0; z-index: 3; width: min(360px, 88vw); overflow: auto; padding: 20px;
+  background: color-mix(in srgb, var(--rbg) 94%, var(--rfg)); color: var(--rfg);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.35); animation: pop 0.18s var(--ease);
+}
+.reader-panel.left { left: 0; }
+.reader-panel.right { right: 0; }
+.reader-panel h2 { font-family: var(--serif); font-size: 20px; margin-bottom: 12px; }
+.reader-panel .label { color: inherit; opacity: 0.7; margin: 18px 0 8px; }
+.reader-panel .fchip { color: inherit; border-color: color-mix(in srgb, var(--rfg) 30%, transparent); }
+.reader-panel .fchip[aria-pressed="true"] { background: var(--rfg); color: var(--rbg); border-color: var(--rfg); }
+.reader-size { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+.reader-toc button {
+  display: block; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: none; color: inherit;
+  text-align: left; cursor: pointer; font-size: 14px; line-height: 1.35;
+}
+.reader-toc button:hover { background: color-mix(in srgb, var(--rfg) 10%, transparent); }
+@media (max-width: 680px) {
+  .reader-turn { position: absolute; top: 0; bottom: 0; z-index: 2; width: 18%; opacity: 0; }
+  .reader-turn.prev { left: 0; }
+  .reader-turn.next { right: 0; }
+  .reader-viewer { padding: 10px 14px; }
+}
+/* Una sola pagina: columna de libro, no de lado a lado de la pantalla */
+.reader[data-spread="none"] .reader-viewer { max-width: 760px; margin: 0 auto; }

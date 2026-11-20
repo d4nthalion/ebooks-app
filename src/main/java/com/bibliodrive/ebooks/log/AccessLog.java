@@ -39,7 +39,7 @@ public class AccessLog {
     /** Tipos de evento. El grupo es lo que filtra la interfaz (Sesiones, Descargas...). */
     public enum Kind {
         LOGIN("session"), LOGIN_FAILED("session"), LOGIN_DENIED("session"), LOGOUT("session"), BLOCKED("session"),
-        DOWNLOAD("download"), KINDLE("kindle"),
+        DOWNLOAD("download"), KINDLE("kindle"), READ("read"),
         EDIT("edit"), COVER("edit"), RENAME("edit"), UNIVERSE("edit"), REFRESH("edit"),
         REQUEST("request"), REQUEST_RESOLVED("request"),
         AMULE("amule"),

@@ -79,6 +79,13 @@ solo al libro si no tiene) o desde la pagina de cada saga.
 Ni las sagas ni los universos salen del nombre de las carpetas: la saga es la que lleva el epub
 (Calibre o esta app) y el universo, el que pone un administrador.
 
+## Leer en la web
+
+Los epub se leen en la propia web (epub.js, servido desde `static/vendor`): paginas con clic en
+los bordes, flechas o deslizando; indice; tamaño y tipo de letra; fondo claro, sepia u oscuro.
+Por donde va cada persona y lo que ha terminado se guarda en `data/reading.json`, asi que se
+sigue en otro dispositivo donde se dejo. Al llegar al final, el libro se marca como leido.
+
 ## Registro
 
 *Admin → Registro*: sesiones, descargas, envios al Kindle, cambios, peticiones, aMule y

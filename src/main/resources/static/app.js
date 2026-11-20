@@ -157,9 +157,10 @@ const bookHref = (book) => `#/libro/${encodeURIComponent(book.id)}`;
 // --- Datos ------------------------------------------------------------------
 
 async function loadData() {
-  const [books, universes, me, order] = await Promise.all([api("/api/books"), api("/api/universes"), api("/api/me"), api("/api/saga-order")]);
+  const [books, universes, me, order, reading] = await Promise.all([api("/api/books"), api("/api/universes"), api("/api/me"), api("/api/saga-order"), api("/api/me/reading")]);
   state.me = me;
   state.order = order ?? {};
+  state.reading = reading ?? {};
   state.books = books;
   state.byId = new Map(books.map((b) => [b.id, b]));
 
@@ -275,13 +276,32 @@ function remoteCover(title, author, coverId, cls = "mini") {
   return h("div", { class: `${cls} cover-made`, style: `--h: ${hueOf(author || title)}` }, h("span", { class: "cm-title" }, title));
 }
 
+// --- Lo que lleva leido cada uno ---
+const readingOf = (book) => state.reading?.[book.id] ?? null;
+const isRead = (book) => !!readingOf(book)?.finishedAt;
+const isReading = (book) => {
+  const r = readingOf(book);
+  return !!r && !r.finishedAt && !!r.cfi;
+};
+const pct = (p) => `${Math.max(1, Math.round((p ?? 0) * 100))} %`;
+
+/** Sobre la portada: una marca si esta leido o la barra de lo que lleva. */
+function readingMark(book, cover) {
+  if (isRead(book)) {
+    cover.append(h("span", { class: "read-badge", title: "Leído" }, icon("check", 14), h("span", { class: "visually-hidden" }, "Leído")));
+  } else if (isReading(book)) {
+    cover.append(h("span", { class: "read-progress", title: `Vas por el ${pct(readingOf(book).percent)}` }, h("i", { style: `width: ${readingOf(book).percent * 100}%` })));
+  }
+  return cover;
+}
+
 function bookCard(book, { showAuthor = true, i = 0 } = {}) {
   return h(
     "a",
     { class: "book", href: bookHref(book), style: `--i: ${i}` },
-    coverEl(book),
+    readingMark(book, coverEl(book)),
     h("span", { class: "book-title" }, book.title),
-    showAuthor ? h("span", { class: "book-author" }, book.author ?? "") : null
+    showAuthor ? h("span", { class: "book-author" }, isReading(book) ? `${book.author ?? ""} · ${pct(readingOf(book).percent)}` : book.author ?? "") : null
   );
 }
 
@@ -467,7 +487,10 @@ function viewHome() {
   const featured = [...recent.filter((b) => b.hasCover), ...recent.filter((b) => !b.hasCover)].slice(0, 6);
   const parts = [hero(featured)];
 
-  const rows = [shelf("Recientes", recent.slice(0, 18).map((b, i) => bookCard(b, { i })), { link: { href: "#/todos", text: "Ver todos" } })];
+  const rows = [];
+  const reading = state.books.filter(isReading).sort((a, b) => readingOf(b).updatedAt - readingOf(a).updatedAt);
+  if (reading.length) rows.push(shelf("Seguir leyendo", reading.map((b, i) => bookCard(b, { i })), { meta: "donde lo dejaste" }));
+  rows.push(shelf("Recientes", recent.slice(0, 18).map((b, i) => bookCard(b, { i })), { link: { href: "#/todos", text: "Ver todos" } }));
   if (state.universes.length) {
     rows.push(shelf("Universos", [...state.universes].sort((a, b) => b.recent - a.recent).map(universeCard), { link: { href: "#/universos", text: "Ver todos" }, meta: "sagas que comparten mundo" }));
   }
@@ -604,6 +627,8 @@ function viewBook(id) {
     h("span", { class: "chip" }, formatSize(book.sizeBytes)),
     h("span", { class: "chip" }, `Añadido ${timeAgo(book.lastModified)}`),
     universe ? h("a", { class: "chip hue-chip hue", href: universeHref(universe), style: `--h: ${universe.hue}` }, `Universo ${universe.name}`) : null,
+    isRead(book) ? h("span", { class: "chip read-chip" }, `Leído ${timeAgo(readingOf(book).finishedAt)}`) : null,
+    isReading(book) ? h("span", { class: "chip read-chip" }, `Vas por el ${pct(readingOf(book).percent)}`) : null,
   ];
 
   const parts = [
@@ -626,8 +651,12 @@ function viewBook(id) {
           h(
             "div",
             { class: "actions" },
-            h("a", { class: "btn btn-white btn-lg", href: `/api/books/${book.id}/download` }, icon("download"), "Descargar"),
-            h("button", { type: "button", class: "btn btn-ghost btn-lg", onclick: () => sendToKindle(book) }, icon("mail"), "Enviar a Kindle"),
+            book.extension === "epub"
+              ? h("a", { class: "btn btn-white btn-lg", href: `#/leer/${encodeURIComponent(book.id)}` }, icon("book"), isReading(book) ? `Seguir leyendo · ${pct(readingOf(book).percent)}` : isRead(book) ? "Volver a leer" : "Leer")
+              : null,
+            h("a", { class: `btn ${book.extension === "epub" ? "btn-ghost" : "btn-white"} btn-lg`, href: `/api/books/${book.id}/download` }, icon("download"), "Descargar"),
+            h("button", { type: "button", class: "round", "aria-label": "Enviar a Kindle", title: "Enviar a Kindle", onclick: () => sendToKindle(book) }, icon("mail")),
+            h("button", { type: "button", class: `round ${isRead(book) ? "on" : ""}`, "aria-pressed": String(isRead(book)), "aria-label": "Leído", title: isRead(book) ? "Leído (pulsa para desmarcar)" : "Marcar como leído", onclick: () => toggleRead(book) }, icon("check")),
             admin ? h("button", { type: "button", class: "round", "aria-label": "Editar datos", title: "Editar datos", "aria-expanded": "false", "aria-controls": "editPanel", id: "editToggle", onclick: toggleEdit }, icon("edit")) : null,
             editable ? h("button", { type: "button", class: "round", "aria-label": "Cambiar portada", title: "Cambiar portada", onclick: () => openCoverDialog(book) }, icon("image")) : null
           )
@@ -835,6 +864,293 @@ async function reloadAndRender() {
   scrollTo(0, y);
 }
 
+// --- Lector de epub -----------------------------------------------------------------
+
+const READER_THEMES = {
+  light: { label: "Claro", bg: "#fbfaf7", fg: "#1d1b17", link: "#0f766e" },
+  sepia: { label: "Sepia", bg: "#f4ecd8", fg: "#3b2f20", link: "#8a5a00" },
+  dark: { label: "Oscuro", bg: "#14161d", fg: "#d6d8df", link: "#5eead4" },
+};
+const READER_FONTS = { book: "Del libro", serif: "Literata", sans: "Sin serifa" };
+/** Paginas a la vista: valores de epub.js (auto = dos si la pantalla es ancha) */
+const READER_SPREADS = { auto: "Automática", none: "Una", always: "Dos" };
+const SPREAD_MIN_WIDTH = 1000;
+
+function readerPrefs() {
+  const base = { theme: document.documentElement.dataset.theme === "light" ? "light" : "dark", size: 100, font: "serif", spread: "auto" };
+  try {
+    return { ...base, ...JSON.parse(localStorage.getItem("bl-reader") ?? "{}") };
+  } catch {
+    return base;
+  }
+}
+function saveReaderPrefs(p) {
+  try { localStorage.setItem("bl-reader", JSON.stringify(p)); } catch { /* sin almacenamiento: dura hasta cerrar */ }
+}
+
+let vendorLoading = null;
+function loadVendor() {
+  const load = (src) => new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = ok;
+    s.onerror = () => fail(new Error("No se pudo cargar el lector."));
+    document.head.append(s);
+  });
+  vendorLoading ??= load("vendor/jszip.min.js").then(() => load("vendor/epub.min.js"));
+  return vendorLoading;
+}
+
+/** Abre el lector a pantalla completa sobre la ficha del libro. */
+async function openReader(id) {
+  const book = state.byId.get(id);
+  if (!book || book.extension !== "epub") return;
+  const prefs = readerPrefs();
+  let epub = null;
+  let rendition = null;
+  let lastCfi = readingOf(book)?.cfi ?? null;
+  let lastPercent = readingOf(book)?.percent ?? 0;
+  let saveTimer = null;
+  let markedEnd = isRead(book);
+  let closed = false;
+
+  const viewer = h("div", { class: "reader-viewer", id: "readerViewer" });
+  const chapter = h("span", { class: "reader-chapter" });
+  const progressText = h("span", { class: "reader-pct" }, "Cargando…");
+  const slider = h("input", { type: "range", min: "0", max: "1000", value: String(Math.round(lastPercent * 1000)), class: "reader-slider", "aria-label": "Ir a una parte del libro", disabled: true });
+  const tocList = h("nav", { class: "reader-toc", "aria-label": "Índice" });
+  const tocPanel = h("aside", { class: "reader-panel left", hidden: true }, h("h2", {}, "Índice"), tocList);
+  const settingsPanel = h("aside", { class: "reader-panel right", hidden: true });
+  const loading = h("div", { class: "reader-loading" }, h("div", { class: "cover skeleton", style: "width: 120px" }), h("p", {}, "Abriendo el libro…"));
+
+  const prev = () => rendition?.prev();
+  const next = () => rendition?.next();
+  const togglePanel = (panel) => {
+    const opening = panel.hidden;
+    tocPanel.hidden = settingsPanel.hidden = true;
+    panel.hidden = !opening;
+  };
+
+  const overlay = h(
+    "div",
+    { class: "reader", role: "dialog", "aria-modal": "true", "aria-label": `Leyendo ${book.title}` },
+    h(
+      "header",
+      { class: "reader-bar" },
+      h("button", { type: "button", class: "reader-btn", "aria-label": "Cerrar el lector", onclick: () => closeReader(true) }, icon("left")),
+      h("div", { class: "reader-title" }, h("b", {}, book.title), chapter),
+      h("button", { type: "button", class: "reader-btn", "aria-label": "Índice", title: "Índice", onclick: () => togglePanel(tocPanel) }, icon("list")),
+      h("button", { type: "button", class: "reader-btn", "aria-label": "Letra y colores", title: "Letra y colores", onclick: () => togglePanel(settingsPanel) }, h("span", { class: "aa", "aria-hidden": "true" }, "Aa")),
+      h("button", { type: "button", class: `reader-btn ${isRead(book) ? "on" : ""}`, id: "readerReadBtn", "aria-pressed": String(isRead(book)), "aria-label": "Leído", title: "Marcar como leído", onclick: async (e) => {
+        await toggleRead(book, { quiet: true });
+        markedEnd = isRead(book);
+        e.currentTarget.classList.toggle("on", isRead(book));
+        e.currentTarget.setAttribute("aria-pressed", String(isRead(book)));
+        toast(isRead(book) ? "Marcado como leído" : "Ya no está marcado como leído", book.title);
+      } }, icon("check"))
+    ),
+    h(
+      "div",
+      { class: "reader-stage" },
+      h("button", { type: "button", class: "reader-turn prev", "aria-label": "Página anterior", onclick: prev }, icon("left")),
+      viewer,
+      loading,
+      h("button", { type: "button", class: "reader-turn next", "aria-label": "Página siguiente", onclick: next }, icon("right")),
+      tocPanel,
+      settingsPanel
+    ),
+    h("footer", { class: "reader-foot" }, slider, progressText)
+  );
+
+  const applyLook = () => {
+    const t = READER_THEMES[prefs.theme] ?? READER_THEMES.dark;
+    overlay.style.setProperty("--rbg", t.bg);
+    overlay.style.setProperty("--rfg", t.fg);
+    overlay.dataset.theme = prefs.theme;
+    if (!rendition) return;
+    rendition.themes.select(prefs.theme);
+    rendition.themes.fontSize(`${prefs.size}%`);
+    rendition.themes.font(prefs.font === "serif" ? "Literata, Georgia, serif" : prefs.font === "sans" ? "system-ui, 'Segoe UI', sans-serif" : "");
+  };
+
+  // Cambiar de una a dos paginas rehace la maquetacion: se vuelve al mismo sitio
+  const applySpread = () => {
+    overlay.dataset.spread = prefs.spread;
+    if (!rendition) return;
+    rendition.spread(prefs.spread in READER_SPREADS ? prefs.spread : "auto", SPREAD_MIN_WIDTH);
+    // El ancho de la columna cambia con el modo (una pagina va mas estrecha)
+    requestAnimationFrame(() => {
+      rendition.resize(viewer.clientWidth, viewer.clientHeight);
+      if (lastCfi) rendition.display(lastCfi);
+    });
+  };
+
+  const drawSettings = () => {
+    const opt = (group, value, label, current) => h("button", { type: "button", class: "fchip", "aria-pressed": String(current === value), onclick: () => {
+      prefs[group] = value;
+      saveReaderPrefs(prefs);
+      if (group === "spread") applySpread();
+      else applyLook();
+      drawSettings();
+    } }, label);
+    settingsPanel.replaceChildren(
+      h("h2", {}, "Letra y colores"),
+      h("p", { class: "label" }, "Tamaño"),
+      h("div", { class: "chip-row" },
+        h("button", { type: "button", class: "fchip", "aria-label": "Letra más pequeña", onclick: () => { prefs.size = Math.max(70, prefs.size - 10); saveReaderPrefs(prefs); applyLook(); drawSettings(); } }, "A−"),
+        h("span", { class: "reader-size" }, `${prefs.size} %`),
+        h("button", { type: "button", class: "fchip", "aria-label": "Letra más grande", onclick: () => { prefs.size = Math.min(200, prefs.size + 10); saveReaderPrefs(prefs); applyLook(); drawSettings(); } }, "A+")),
+      h("p", { class: "label" }, "Páginas"),
+      h("div", { class: "chip-row" }, Object.entries(READER_SPREADS).map(([k, label]) => opt("spread", k, label, prefs.spread))),
+      h("p", { class: "label" }, "Fondo"),
+      h("div", { class: "chip-row" }, Object.entries(READER_THEMES).map(([k, t]) => opt("theme", k, t.label, prefs.theme))),
+      h("p", { class: "label" }, "Tipo de letra"),
+      h("div", { class: "chip-row" }, Object.entries(READER_FONTS).map(([k, label]) => opt("font", k, label, prefs.font)))
+    );
+  };
+
+  const saveNow = (keepalive = false) => {
+    clearTimeout(saveTimer);
+    if (!lastCfi) return;
+    const body = JSON.stringify({ cfi: lastCfi, percent: lastPercent });
+    fetch(`/api/books/${book.id}/progress`, { method: "PUT", headers: { "Content-Type": "application/json" }, body, keepalive })
+      .then((r) => r.ok && r.json())
+      .then((entry) => { if (entry) state.reading[book.id] = entry; })
+      .catch(() => {});
+  };
+
+  const onKey = (e) => {
+    if (e.target.closest?.("input, textarea")) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown" || (e.key === " " && !e.shiftKey)) { e.preventDefault?.(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp" || (e.key === " " && e.shiftKey)) { e.preventDefault?.(); prev(); }
+    else if (e.key === "Escape") {
+      if (!tocPanel.hidden || !settingsPanel.hidden) { tocPanel.hidden = settingsPanel.hidden = true; }
+      else closeReader(true);
+    }
+  };
+
+  function closeReader(navigate) {
+    if (closed) return;
+    closed = true;
+    saveNow(true);
+    document.removeEventListener("keydown", onKey);
+    try { epub?.destroy(); } catch { /* ya cerrado */ }
+    overlay.remove();
+    document.body.classList.remove("reading");
+    if (navigate) {
+      if (state.navCount > 1) history.back();
+      else location.hash = bookHref(book);
+    }
+  }
+  onLeave(() => closeReader(false));
+
+  overlay.dataset.spread = prefs.spread;
+  document.body.append(overlay);
+  document.body.classList.add("reading");
+  document.addEventListener("keydown", onKey);
+  drawSettings();
+  applyLook();
+  overlay.querySelector(".reader-btn").focus();
+
+  try {
+    const [data] = await Promise.all([
+      fetch(`/api/books/${book.id}/epub`).then((r) => {
+        if (r.status === 401) { location.href = "/login.html"; throw new Error("La sesión ha caducado."); }
+        if (!r.ok) throw new Error("No se pudo abrir el libro.");
+        return r.arrayBuffer();
+      }),
+      loadVendor(),
+    ]);
+    if (closed) return;
+    epub = window.ePub(data);
+    rendition = epub.renderTo(viewer, { width: "100%", height: "100%", flow: "paginated", spread: prefs.spread in READER_SPREADS ? prefs.spread : "auto", minSpreadWidth: SPREAD_MIN_WIDTH, allowScriptedContent: false });
+    for (const [k, t] of Object.entries(READER_THEMES)) {
+      rendition.themes.register(k, {
+        body: { background: `${t.bg} !important`, color: `${t.fg} !important`, "line-height": "1.6" },
+        "p, li, span, div, h1, h2, h3, h4": { color: `${t.fg} !important` },
+        a: { color: `${t.link} !important` },
+      });
+    }
+    // Literata desde la propia app, para que el tipo de letra no dependa del libro
+    rendition.hooks.content.register((contents) => contents.addStylesheet(`${location.origin}/fonts/fonts.css`));
+    applyLook();
+
+    rendition.on("relocated", (loc) => {
+      lastCfi = loc.start.cfi;
+      const ready = epub.locations.length() > 0;
+      if (ready) lastPercent = epub.locations.percentageFromCfi(lastCfi);
+      progressText.textContent = ready ? pct(lastPercent) : "…";
+      if (ready) slider.value = String(Math.round(lastPercent * 1000));
+      const item = epub.navigation?.get(loc.start.href);
+      chapter.textContent = item?.label?.trim() ?? "";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveNow(), 1500);
+      if (loc.atEnd && !markedEnd) {
+        markedEnd = true;
+        toggleRead(book, { quiet: true }).then(() => {
+          $("readerReadBtn")?.classList.add("on");
+          toast("¡Terminado!", `«${book.title}» queda marcado como leído.`);
+        });
+      }
+    });
+    rendition.on("keydown", onKey);
+    let touchX = null;
+    rendition.on("touchstart", (e) => { touchX = e.changedTouches[0].screenX; });
+    rendition.on("touchend", (e) => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50) (dx < 0 ? next : prev)();
+      touchX = null;
+    });
+
+    await rendition.display(lastCfi || undefined);
+    loading.remove();
+
+    epub.loaded.navigation.then((nav) => {
+      const item = (t, depth) => [
+        h("button", { type: "button", style: `padding-left: ${12 + depth * 16}px`, onclick: () => { rendition.display(t.href); tocPanel.hidden = true; } }, t.label.trim()),
+        ...(t.subitems ?? []).flatMap((s) => item(s, depth + 1)),
+      ];
+      tocList.replaceChildren(...nav.toc.flatMap((t) => item(t, 0)));
+      if (!nav.toc.length) tocList.replaceChildren(h("p", { class: "status" }, "Este libro no trae índice."));
+    });
+
+    // Las posiciones para el porcentaje tardan en calcularse: se guardan en el navegador
+    const cacheKey = `bl-loc-${book.id}-${book.lastModified}`;
+    let cached = null;
+    try { cached = localStorage.getItem(cacheKey); } catch { /* sin almacenamiento */ }
+    if (cached) epub.locations.load(cached);
+    else {
+      await epub.locations.generate(1500);
+      try { localStorage.setItem(cacheKey, epub.locations.save()); } catch { /* lleno: se recalcula la proxima vez */ }
+    }
+    if (closed) return;
+    slider.disabled = false;
+    const loc = rendition.currentLocation();
+    if (loc?.start) {
+      lastPercent = epub.locations.percentageFromCfi(loc.start.cfi);
+      progressText.textContent = pct(lastPercent);
+      slider.value = String(Math.round(lastPercent * 1000));
+    }
+    slider.addEventListener("change", () => rendition.display(epub.locations.cfiFromPercentage(Number(slider.value) / 1000)));
+  } catch (err) {
+    loading.replaceChildren(h("p", {}, err.message), h("button", { type: "button", class: "btn btn-quiet", onclick: () => closeReader(true) }, "Volver"));
+  }
+}
+
+async function toggleRead(book, { quiet = false } = {}) {
+  const read = !isRead(book);
+  try {
+    state.reading = await api(`/api/books/${book.id}/read`, json("PUT", { read }));
+    if (!quiet) {
+      await reloadAndRender();
+      toast(read ? "Marcado como leído" : "Ya no está marcado como leído", book.title);
+    }
+  } catch (err) {
+    toast("No se pudo guardar", err.message, "error");
+  }
+}
+
 async function sendToKindle(book) {
   toast("Enviando a tu Kindle…", book.title, "info");
   try {
@@ -1007,7 +1323,7 @@ function viewSaga(key) {
         { class: `volume-row hue ${movable ? "movable" : ""}`, style: `--h: ${saga.hue}; --i: ${i}`, "data-id": book.id, draggable: movable ? "true" : null },
         h("span", { class: "vr-num" }, index != null ? formatIndex(index) : movable ? h("span", { class: "drag-handle", title: "Arrastra para colocarlo" }, icon("grip", 22)) : h("small", {}, "Sin número")),
         h("a", { href: bookHref(book), tabindex: "-1", "aria-hidden": "true", draggable: "false" }, coverEl(book)),
-        h("a", { class: "vr-open", href: bookHref(book), style: "text-decoration: none", draggable: "false" }, h("span", { class: "vr-title" }, book.title), h("span", { class: "vr-meta" }, `${movable ? "Sin número · " : ""}${book.author ?? ""}${book.author ? " · " : ""}${book.extension.toUpperCase()} · ${formatSize(book.sizeBytes)}`)),
+        h("a", { class: "vr-open", href: bookHref(book), style: "text-decoration: none", draggable: "false" }, h("span", { class: "vr-title" }, book.title), h("span", { class: "vr-meta" }, `${movable ? "Sin número · " : ""}${book.author ?? ""}${book.author ? " · " : ""}${book.extension.toUpperCase()} · ${formatSize(book.sizeBytes)}`, isRead(book) ? h("b", { class: "vr-read" }, " · Leído") : isReading(book) ? h("b", { class: "vr-read" }, ` · Vas por el ${pct(readingOf(book).percent)}`) : null)),
         h(
           "div",
           { class: "vr-actions" },
@@ -1142,8 +1458,28 @@ function viewAuthor(key) {
   return parts;
 }
 
+const ALL_FILTERS = [
+  ["all", "Todos", () => true],
+  ["unread", "Sin leer", (b) => !isRead(b) && !isReading(b)],
+  ["reading", "Leyendo", isReading],
+  ["read", "Leídos", isRead],
+];
+
 function viewAll() {
-  return [viewHead("Todos los libros", `${plural(state.books.length, "libro", "libros")}, por autor y saga`), h("div", { class: "grid" }, state.books.map((b, i) => bookCard(b, { i })))];
+  const current = ALL_FILTERS.find((f) => f[0] === state.allFilter) ?? ALL_FILTERS[0];
+  const books = state.books.filter(current[2]);
+  const chips = h(
+    "div",
+    { class: "chip-row section-pad", style: "margin-bottom: 22px", role: "group", "aria-label": "Filtrar por lectura" },
+    ALL_FILTERS.map(([id, label, test]) =>
+      h("button", { type: "button", class: "fchip", "aria-pressed": String(current[0] === id), onclick: () => { state.allFilter = id; render({ focus: false }); } }, `${label} · ${state.books.filter(test).length}`)
+    )
+  );
+  return [
+    viewHead("Todos los libros", `${plural(state.books.length, "libro", "libros")}, por autor y saga`),
+    chips,
+    books.length ? h("div", { class: "grid" }, books.map((b, i) => bookCard(b, { i }))) : h("p", { class: "status section-pad" }, "Ningún libro con ese filtro."),
+  ];
 }
 
 function viewSearch(query) {
@@ -1670,10 +2006,10 @@ function pendingItem(p, reload) {
 }
 
 /* Registro */
-const LOG_GROUPS = [["session", "Sesiones"], ["download", "Descargas"], ["kindle", "Kindle"], ["edit", "Cambios"], ["request", "Peticiones"], ["amule", "aMule"], ["error", "Errores"]];
+const LOG_GROUPS = [["session", "Sesiones"], ["download", "Descargas"], ["read", "Lectura"], ["kindle", "Kindle"], ["edit", "Cambios"], ["request", "Peticiones"], ["amule", "aMule"], ["error", "Errores"]];
 const KIND_TEXT = {
   login: "Sesión", logout: "Sesión", login_failed: "Login fallido", login_denied: "Sin acceso", blocked: "Bloqueo",
-  download: "Descarga", kindle: "Kindle", edit: "Cambio", cover: "Portada", rename: "Renombrado", universe: "Universo", refresh: "Actualizar",
+  download: "Descarga", read: "Lectura", kindle: "Kindle", edit: "Cambio", cover: "Portada", rename: "Renombrado", universe: "Universo", refresh: "Actualizar",
   request: "Petición", request_resolved: "Petición", amule: "aMule", error: "Error",
 };
 
@@ -1769,6 +2105,11 @@ function render({ focus = true } = {}) {
   const views = {
     "": viewHome,
     libro: () => viewBook(param),
+    // El lector se abre encima de la ficha: al cerrarlo, la ficha ya esta debajo
+    leer: () => {
+      queueMicrotask(() => openReader(param));
+      return viewBook(param);
+    },
     universos: viewUniverses,
     universo: () => viewUniverse(param),
     sagas: viewSagas,
