@@ -4,6 +4,9 @@ import com.bibliodrive.ebooks.catalog.Book;
 import com.bibliodrive.ebooks.catalog.EpubMetadataWriter;
 import com.bibliodrive.ebooks.edit.BookEditService;
 import com.bibliodrive.ebooks.edit.CoverSearchService;
+import com.bibliodrive.ebooks.log.AccessLog;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -40,10 +43,12 @@ public class BookEditController {
 
     private final BookEditService edits;
     private final CoverSearchService coverSearch;
+    private final AccessLog accessLog;
 
-    public BookEditController(BookEditService edits, CoverSearchService coverSearch) {
+    public BookEditController(BookEditService edits, CoverSearchService coverSearch, AccessLog accessLog) {
         this.edits = edits;
         this.coverSearch = coverSearch;
+        this.accessLog = accessLog;
     }
 
     // --- Portada ----------------------------------------------------------------
@@ -55,26 +60,34 @@ public class BookEditController {
     }
 
     @PostMapping("/books/{id}/cover")
-    public Book uploadCover(@PathVariable String id, @RequestParam("file") MultipartFile file) throws IOException {
+    public Book uploadCover(@PathVariable String id, @RequestParam("file") MultipartFile file, Authentication auth,
+            HttpServletRequest http) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("No se ha recibido ninguna imagen");
         }
         if (file.getSize() > CoverSearchService.MAX_IMAGE_BYTES) {
             throw new IllegalArgumentException("La imagen es demasiado grande (maximo 20 MB)");
         }
-        return edits.applyCover(id, file.getBytes());
+        Book book = edits.applyCover(id, file.getBytes());
+        accessLog.event(AccessLog.Kind.COVER, auth.getName(), http.getRemoteAddr(),
+                "Portada cambiada: " + book.title(), "imagen subida");
+        return book;
     }
 
     @PostMapping("/books/{id}/cover/openlibrary/{coverId}")
-    public Book useOpenLibraryCover(@PathVariable String id, @PathVariable long coverId)
-            throws IOException, InterruptedException {
-        return edits.applyCover(id, coverSearch.downloadOpenLibraryCover(coverId));
+    public Book useOpenLibraryCover(@PathVariable String id, @PathVariable long coverId, Authentication auth,
+            HttpServletRequest http) throws IOException, InterruptedException {
+        Book book = edits.applyCover(id, coverSearch.downloadOpenLibraryCover(coverId));
+        accessLog.event(AccessLog.Kind.COVER, auth.getName(), http.getRemoteAddr(),
+                "Portada cambiada: " + book.title(), "Open Library " + coverId);
+        return book;
     }
 
     // --- Metadatos --------------------------------------------------------------
 
     @PatchMapping("/books/{id}")
-    public Book updateMetadata(@PathVariable String id, @RequestBody MetadataRequest body) throws IOException {
+    public Book updateMetadata(@PathVariable String id, @RequestBody MetadataRequest body, Authentication auth,
+            HttpServletRequest http) throws IOException {
         requireNotBlankIfPresent(body.title(), "El titulo no puede quedar vacio");
         requireNotBlankIfPresent(body.author(), "El autor no puede quedar vacio");
         String index = body.seriesIndex();
@@ -88,24 +101,45 @@ public class BookEditController {
             }
             index = index.trim().replace(',', '.');
         }
-        return edits.updateMetadata(id, new EpubMetadataWriter.Changes(
+        Book book = edits.updateMetadata(id, new EpubMetadataWriter.Changes(
                 body.title(), body.author(), body.series(), index));
+        accessLog.event(AccessLog.Kind.EDIT, auth.getName(), http.getRemoteAddr(),
+                "Datos cambiados: " + book.title(), describe(body));
+        return book;
+    }
+
+    private static String describe(MetadataRequest body) {
+        List<String> parts = new java.util.ArrayList<>();
+        if (body.title() != null) parts.add("título «" + body.title() + "»");
+        if (body.author() != null) parts.add("autor «" + body.author() + "»");
+        if (body.series() != null) parts.add(body.series().isEmpty() ? "sin saga" : "saga «" + body.series() + "»");
+        if (body.seriesIndex() != null) parts.add("número " + body.seriesIndex());
+        return String.join(", ", parts);
     }
 
     @PostMapping("/authors/rename")
-    public BookEditService.BulkResult renameAuthor(@RequestBody RenameRequest body) {
+    public BookEditService.BulkResult renameAuthor(@RequestBody RenameRequest body, Authentication auth,
+            HttpServletRequest http) {
         if (body.from() == null || body.to() == null || body.to().isBlank()) {
             throw new IllegalArgumentException("Indica el autor actual y el nuevo nombre");
         }
-        return edits.renameAuthor(body.from(), body.to());
+        BookEditService.BulkResult result = edits.renameAuthor(body.from(), body.to());
+        accessLog.event(AccessLog.Kind.RENAME, auth.getName(), http.getRemoteAddr(),
+                "Autor renombrado: «" + body.from() + "» → «" + body.to() + "»", result.updated() + " libros");
+        return result;
     }
 
     @PostMapping("/series/rename")
-    public BookEditService.BulkResult renameSeries(@RequestBody RenameRequest body) {
+    public BookEditService.BulkResult renameSeries(@RequestBody RenameRequest body, Authentication auth,
+            HttpServletRequest http) {
         if (body.from() == null || body.from().isBlank() || body.to() == null) {
             throw new IllegalArgumentException("Indica la saga actual y el nuevo nombre");
         }
-        return edits.renameSeries(body.from(), body.to(), body.author());
+        BookEditService.BulkResult result = edits.renameSeries(body.from(), body.to(), body.author());
+        accessLog.event(AccessLog.Kind.RENAME, auth.getName(), http.getRemoteAddr(),
+                "Saga renombrada: «" + body.from() + "» → «" + (body.to().isEmpty() ? "(sin saga)" : body.to()) + "»",
+                result.updated() + " libros");
+        return result;
     }
 
     private static void requireNotBlankIfPresent(String value, String message) {

@@ -1,5 +1,6 @@
 package com.bibliodrive.ebooks.security;
 
+import com.bibliodrive.ebooks.log.AccessLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,12 +41,19 @@ public class LoginAttemptService {
     private final Duration blockTime;
     private final Map<String, Attempts> byIp = new ConcurrentHashMap<>();
     private final Map<String, Attempts> byUser = new ConcurrentHashMap<>();
+    private final AccessLog accessLog;
+
+    /** Un bloqueo activo, para el panel de administracion. kind: ip | user */
+    public record Block(String kind, String key, long until) {
+    }
 
     public LoginAttemptService(
             @Value("${app.login.max-failures-per-ip:5}") int maxPerIp,
             @Value("${app.login.max-failures-per-user:10}") int maxPerUser,
             @Value("${app.login.window-minutes:15}") long windowMinutes,
-            @Value("${app.login.block-minutes:15}") long blockMinutes) {
+            @Value("${app.login.block-minutes:15}") long blockMinutes,
+            AccessLog accessLog) {
+        this.accessLog = accessLog;
         this.maxPerIp = maxPerIp;
         this.maxPerUser = maxPerUser;
         this.window = Duration.ofMinutes(windowMinutes);
@@ -60,10 +68,26 @@ public class LoginAttemptService {
     public void loginFailed(String ip, String username) {
         if (record(byIp, ip, maxPerIp)) {
             log.warn("IP {} bloqueada {} min por {} logins fallidos", ip, blockTime.toMinutes(), maxPerIp);
+            accessLog.event(AccessLog.Kind.BLOCKED, null, ip,
+                    "IP bloqueada " + blockTime.toMinutes() + " min tras " + maxPerIp + " intentos fallidos");
         }
         if (username != null && !username.isBlank() && record(byUser, key(username), maxPerUser)) {
             log.warn("Usuario {} bloqueado {} min por {} logins fallidos", username, blockTime.toMinutes(), maxPerUser);
+            accessLog.event(AccessLog.Kind.BLOCKED, username, ip,
+                    "Cuenta bloqueada " + blockTime.toMinutes() + " min tras " + maxPerUser + " intentos fallidos");
         }
+    }
+
+    public List<Block> blocks() {
+        Instant now = Instant.now();
+        List<Block> result = new ArrayList<>();
+        byIp.forEach((ip, a) -> {
+            if (blocked(a, now)) result.add(new Block("ip", ip, a.blockedUntil().toEpochMilli()));
+        });
+        byUser.forEach((user, a) -> {
+            if (blocked(a, now)) result.add(new Block("user", user, a.blockedUntil().toEpochMilli()));
+        });
+        return result;
     }
 
     public void loginSucceeded(String ip, String username) {

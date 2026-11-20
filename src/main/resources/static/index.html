@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Biblioteca</title>
+  <title>BiblioLocal</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="preload" href="fonts/literata-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="styles.css" />
   <script src="theme.js"></script>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs><linearGradient id="g-brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+    <symbol id="i-brand" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="url(#g-brand)"/><path d="M16 11c-2-1.5-4.5-2-7.5-1.7v11.4c3-.3 5.5.2 7.5 1.7 2-1.5 4.5-2 7.5-1.7V9.3c-3-.3-5.5.2-7.5 1.7Zm0 0v11.4" fill="none" stroke="#032623" stroke-width="1.7" stroke-linejoin="round"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 20v-4h-4"/></symbol>
     <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
@@ -22,122 +25,76 @@
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></symbol>
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m4 16 4.5-4.5 4 4L15 13l5 5"/><circle cx="15" cy="8" r="1.5"/></symbol>
-    <symbol id="i-book" viewBox="0 0 32 32"><path d="M16 8.5C13 6.3 9 5.5 4 6v18c5-.5 9 .3 12 2.5 3-2.2 7-3 12-2.5V6c-5-.5-9 .3-12 2.5Z" fill="currentColor" fill-opacity=".14"/><path d="M16 8.5V26.5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.4 9.3 4.3 12 6c2.7-1.7 5.5-1.6 8-.5v13c-2.5-1.1-5.3-1-8 .5-2.7-1.5-5.5-1.6-8-.5Z"/><path d="M12 6v13.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></symbol>
   </svg>
 
   <a class="skip-link" href="#main">Saltar al contenido</a>
 
-  <header class="topbar">
-    <a class="brand" href="#/" aria-label="Biblioteca, inicio">
-      <svg class="brand-mark icon" style="color: var(--accent); stroke-width: 1.6"><use href="#i-book"/></svg>
-      <span>Biblioteca</span>
+  <header class="topbar" id="topbar">
+    <a class="brand" href="#/" aria-label="BiblioLocal, inicio">
+      <svg class="brand-mark" aria-hidden="true"><use href="#i-brand"/></svg>
+      <span>Biblio<b>Local</b></span>
     </a>
     <nav class="nav" aria-label="Secciones">
       <a href="#/" data-nav="home">Inicio</a>
+      <a href="#/universos" data-nav="universes" id="navUniverses" hidden>Universos</a>
       <a href="#/sagas" data-nav="sagas">Sagas</a>
       <a href="#/autores" data-nav="authors">Autores</a>
-      <a href="#/todos" data-nav="all">Todos los libros</a>
+      <a href="#/todos" data-nav="all">Todos</a>
+      <a href="#/peticiones" data-nav="requests">Peticiones <span class="badge" id="reqBadge" hidden></span></a>
+      <a href="#/admin/peticiones" data-nav="admin" id="navAdmin" hidden>Admin <span class="badge" id="adminBadge" hidden></span></a>
     </nav>
     <div class="top-actions">
       <form class="search" role="search" id="searchForm">
         <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
         <label for="search" class="visually-hidden">Buscar por título, autor o saga</label>
-        <input id="search" type="search" placeholder="Buscar libros" autocomplete="off" />
+        <input id="search" type="search" placeholder="Títulos, autores, sagas…" autocomplete="off" />
       </form>
-      <button id="refreshBtn" class="tool-btn" type="button" title="Volver a leer la carpeta de libros">
-        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="label">Actualizar</span>
-      </button>
-      <button id="kindleBtn" class="tool-btn" type="button" title="Tu dirección de Kindle">
-        <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><span class="label">Kindle</span>
+      <button id="refreshBtn" class="tool-btn" type="button" title="Volver a leer la carpeta de libros" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="visually-hidden">Actualizar la biblioteca</span>
       </button>
       <button id="themeToggle" class="tool-btn" type="button"></button>
-      <form action="/logout" method="post">
-        <button class="tool-btn" type="submit" title="Cerrar sesión">
-          <svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg><span class="visually-hidden">Cerrar sesión</span>
-        </button>
-      </form>
+      <button id="meBtn" class="me-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="meMenu">·</button>
     </div>
   </header>
+  <div class="menu" id="meMenu" hidden>
+    <p><b id="meName"></b><span id="meRole"></span></p>
+    <button type="button" id="kindleBtn"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>Tu Kindle</button>
+    <form action="/logout" method="post"><button type="submit"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Cerrar sesión</button></form>
+  </div>
 
   <main id="main" tabindex="-1">
-    <p class="status-line" id="loading">Cargando la biblioteca...</p>
+    <!-- Esqueleto mientras carga la biblioteca -->
+    <section class="hero" aria-hidden="true"><div class="hero-content" style="width: min(560px, 80vw)">
+      <div class="skeleton" style="height: 14px; width: 160px; border-radius: 6px; margin-bottom: 18px"></div>
+      <div class="skeleton" style="height: 58px; width: 90%; border-radius: 10px; margin-bottom: 14px"></div>
+      <div class="skeleton" style="height: 20px; width: 40%; border-radius: 6px; margin-bottom: 30px"></div>
+      <div class="skeleton" style="height: 50px; width: 260px; border-radius: 10px"></div>
+    </div></section>
+    <div class="rows" aria-hidden="true"><div class="track">
+      <div class="cover skeleton" style="width: var(--cover-w)"></div><div class="cover skeleton" style="width: var(--cover-w)"></div>
+      <div class="cover skeleton" style="width: var(--cover-w)"></div><div class="cover skeleton" style="width: var(--cover-w)"></div>
+      <div class="cover skeleton" style="width: var(--cover-w)"></div><div class="cover skeleton" style="width: var(--cover-w)"></div>
+    </div></div>
+    <p class="visually-hidden" role="status">Cargando la biblioteca…</p>
   </main>
 
   <p id="announcer" class="visually-hidden" aria-live="polite"></p>
-
-  <!-- Ficha del libro -->
-  <dialog id="bookDialog" class="book-dialog" aria-labelledby="bdTitle">
-    <button class="dialog-close" type="button" data-close aria-label="Cerrar">
-      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
-    </button>
-    <div class="bd-top">
-      <div class="bd-backdrop" id="bdBackdrop"></div>
-      <div class="cover-col" id="bdCover"></div>
-      <div>
-        <h2 class="bd-title" id="bdTitle"></h2>
-        <p class="bd-author" id="bdAuthor"></p>
-        <p class="bd-saga" id="bdSaga"></p>
-        <p class="bd-file" id="bdFile"></p>
-        <div class="actions bd-actions">
-          <a id="bdDownload" class="btn btn-primary" href="#">
-            <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Descargar
-          </a>
-          <button id="bdKindle" class="btn btn-secondary" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>Enviar a Kindle
-          </button>
-        </div>
-        <div class="actions bd-edit-actions" id="bdEditActions">
-          <button id="bdEdit" class="btn btn-quiet btn-sm" type="button" aria-expanded="false" aria-controls="editPanel">
-            <svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Editar datos
-          </button>
-          <button id="bdCoverBtn" class="btn btn-quiet btn-sm" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>Cambiar portada
-          </button>
-        </div>
-        <p id="bdStatus" class="status" role="status"></p>
-      </div>
-    </div>
-
-    <form id="editPanel" class="edit-panel" hidden>
-      <h3>Editar datos</h3>
-      <div class="form-grid">
-        <div class="field">
-          <label for="editTitle">Título</label>
-          <input id="editTitle" class="input" type="text" required />
-        </div>
-        <div class="field">
-          <label for="editAuthor">Autor <span class="hint">(elige uno de la lista para que coincida)</span></label>
-          <input id="editAuthor" class="input" type="text" list="authorOptions" required />
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="editSeries">Saga <span class="hint">(vacío si no tiene)</span></label>
-            <input id="editSeries" class="input" type="text" list="seriesOptions" />
-          </div>
-          <div class="field">
-            <label for="editSeriesIndex">Número</label>
-            <input id="editSeriesIndex" class="input" type="text" inputmode="decimal" />
-          </div>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button id="editSave" class="btn btn-primary" type="submit">Guardar cambios</button>
-        <button id="editCancel" class="btn btn-quiet" type="button">Cancelar</button>
-      </div>
-      <p id="editStatus" class="status" role="status"></p>
-    </form>
-
-    <section class="bd-section" id="bdSiblingsSection" hidden>
-      <h3 id="bdSiblingsTitle"></h3>
-      <div class="bd-siblings" id="bdSiblings"></div>
-    </section>
-  </dialog>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <!-- Cambiar portada -->
   <dialog id="coverDialog" class="cover-dialog" aria-labelledby="coverTitle">
-    <button class="dialog-close" type="button" data-close aria-label="Cerrar">
-      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
-    </button>
+    <button class="dialog-close" type="button" data-close aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     <div class="dialog-body">
       <h2 id="coverTitle">Cambiar portada</h2>
       <p class="dialog-lead" id="coverLead"></p>
@@ -158,9 +115,7 @@
 
   <!-- Renombrar autor / saga -->
   <dialog id="renameDialog" aria-labelledby="renameTitle">
-    <button class="dialog-close" type="button" data-close aria-label="Cerrar">
-      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
-    </button>
+    <button class="dialog-close" type="button" data-close aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     <form id="renameForm" class="dialog-body">
       <h2 id="renameTitle"></h2>
       <p class="dialog-lead" id="renameInfo"></p>
@@ -169,18 +124,38 @@
         <input id="renameInput" class="input" type="text" />
       </div>
       <div class="form-actions">
-        <button id="renameSave" class="btn btn-primary" type="submit">Cambiar en todos sus libros</button>
+        <button id="renameSave" class="btn btn-grad" type="submit">Cambiar en todos sus libros</button>
         <button class="btn btn-quiet" type="button" data-close>Cancelar</button>
       </div>
       <p id="renameStatus" class="status" role="status"></p>
     </form>
   </dialog>
 
+  <!-- Universo de una saga o de un libro suelto -->
+  <dialog id="universeDialog" aria-labelledby="universeTitle">
+    <button class="dialog-close" type="button" data-close aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    <form id="universeForm" class="dialog-body">
+      <h2 id="universeTitle">Universo</h2>
+      <p class="dialog-lead" id="universeLead"></p>
+      <fieldset style="border: 0; padding: 0; margin: 0">
+        <legend class="visually-hidden">Elige el universo</legend>
+        <div class="option-list" id="universeOptions"></div>
+      </fieldset>
+      <div class="field" id="universeNewField" hidden>
+        <label for="universeNewName">Nombre del universo nuevo</label>
+        <input id="universeNewName" class="input" type="text" placeholder="Por ejemplo: Tierra Media" />
+      </div>
+      <div class="form-actions">
+        <button id="universeSave" class="btn btn-grad" type="submit">Guardar</button>
+        <button class="btn btn-quiet" type="button" data-close>Cancelar</button>
+      </div>
+      <p id="universeStatus" class="status" role="status"></p>
+    </form>
+  </dialog>
+
   <!-- Dirección de Kindle -->
   <dialog id="kindleDialog" aria-labelledby="kindleTitle">
-    <button class="dialog-close" type="button" data-close aria-label="Cerrar">
-      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
-    </button>
+    <button class="dialog-close" type="button" data-close aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     <form id="kindleForm" class="dialog-body">
       <h2 id="kindleTitle">Tu Kindle</h2>
       <p class="dialog-lead">
@@ -192,7 +167,7 @@
         <input id="kindleEmail" class="input" type="email" autocomplete="email" placeholder="tunombre@kindle.com" />
       </div>
       <div class="form-actions">
-        <button id="kindleSave" class="btn btn-primary" type="submit">Guardar dirección</button>
+        <button id="kindleSave" class="btn btn-grad" type="submit">Guardar dirección</button>
       </div>
       <p id="kindleStatus" class="status" role="status"></p>
     </form>

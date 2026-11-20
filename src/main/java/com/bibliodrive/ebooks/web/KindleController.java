@@ -3,6 +3,7 @@ package com.bibliodrive.ebooks.web;
 import com.bibliodrive.ebooks.catalog.Book;
 import com.bibliodrive.ebooks.catalog.CatalogIndexService;
 import com.bibliodrive.ebooks.kindle.KindleMailService;
+import com.bibliodrive.ebooks.log.AccessLog;
 import com.bibliodrive.ebooks.user.UserPreferencesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,12 +30,14 @@ public class KindleController {
     private final UserPreferencesService preferences;
     private final KindleMailService mailService;
     private final CatalogIndexService catalog;
+    private final AccessLog accessLog;
 
     public KindleController(UserPreferencesService preferences, KindleMailService mailService,
-            CatalogIndexService catalog) {
+            CatalogIndexService catalog, AccessLog accessLog) {
         this.preferences = preferences;
         this.mailService = mailService;
         this.catalog = catalog;
+        this.accessLog = accessLog;
     }
 
     @GetMapping("/me/kindle-email")
@@ -51,7 +54,8 @@ public class KindleController {
     }
 
     @PostMapping("/books/{id}/send-to-kindle")
-    public ResponseEntity<Map<String, String>> sendToKindle(Authentication auth, @PathVariable String id) {
+    public ResponseEntity<Map<String, String>> sendToKindle(Authentication auth, @PathVariable String id,
+            jakarta.servlet.http.HttpServletRequest http) {
         String kindleEmail = preferences.getKindleEmail(auth.getName());
         if (kindleEmail == null || kindleEmail.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "No has configurado tu email de Kindle todavia"));
@@ -64,9 +68,13 @@ public class KindleController {
             }
             try {
                 mailService.sendToKindle(kindleEmail, book, file.toFile());
+                accessLog.event(AccessLog.Kind.KINDLE, auth.getName(), http.getRemoteAddr(),
+                        book.title() + " → " + kindleEmail);
                 return ResponseEntity.ok(Map.of("status", "enviado a " + kindleEmail));
             } catch (Exception e) {
                 log.error("Error enviando {} a Kindle ({})", book.fileName(), kindleEmail, e);
+                accessLog.event(AccessLog.Kind.ERROR, auth.getName(), http.getRemoteAddr(),
+                        "Enviar a Kindle: " + book.title(), e.getMessage());
                 return ResponseEntity.internalServerError().body(Map.of("error", "No se pudo enviar: " + e.getMessage()));
             }
         }).orElseGet(() -> ResponseEntity.notFound().build());

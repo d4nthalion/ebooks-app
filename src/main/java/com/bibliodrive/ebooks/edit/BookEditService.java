@@ -83,19 +83,8 @@ public class BookEditService {
         }
         synchronized (this) {
             Path file = fileOf(book);
-            boolean declaresSeries = metadataReader.read(file).series() != null;
-
-            if (changes.series() == null && changes.seriesIndex() != null && !declaresSeries) {
-                if (book.series() == null) {
-                    throw new IllegalArgumentException("El libro no tiene saga: indica tambien el nombre de la saga");
-                }
-                // La saga sale de la carpeta: se escribe en el epub junto al numero
-                changes = new EpubMetadataWriter.Changes(changes.title(), changes.author(), book.series(),
-                        changes.seriesIndex());
-            }
-            if ("".equals(changes.series()) && !declaresSeries && book.series() != null) {
-                throw new IllegalArgumentException("La saga «" + book.series() + "» sale del nombre de la carpeta, "
-                        + "no del epub, asi que no se puede quitar desde aqui: mueve el libro fuera de esa carpeta.");
+            if (changes.series() == null && changes.seriesIndex() != null && book.series() == null) {
+                throw new IllegalArgumentException("El libro no tiene saga: indica tambien el nombre de la saga");
             }
 
             backupOnce(book, file);

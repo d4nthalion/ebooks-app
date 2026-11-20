@@ -2,6 +2,9 @@ package com.bibliodrive.ebooks.web;
 
 import com.bibliodrive.ebooks.catalog.Book;
 import com.bibliodrive.ebooks.catalog.CatalogIndexService;
+import com.bibliodrive.ebooks.log.AccessLog;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,9 +28,11 @@ import java.util.Map;
 public class BookController {
 
     private final CatalogIndexService catalog;
+    private final AccessLog accessLog;
 
-    public BookController(CatalogIndexService catalog) {
+    public BookController(CatalogIndexService catalog, AccessLog accessLog) {
         this.catalog = catalog;
+        this.accessLog = accessLog;
     }
 
     @GetMapping("/books")
@@ -55,12 +60,16 @@ public class BookController {
     }
 
     @GetMapping("/books/{id}/download")
-    public ResponseEntity<FileSystemResource> download(@PathVariable String id) {
+    public ResponseEntity<FileSystemResource> download(@PathVariable String id, Authentication auth,
+            HttpServletRequest http) {
         return catalog.findById(id).<ResponseEntity<FileSystemResource>>map(book -> {
             Path file = catalog.resolveFile(book);
             if (!Files.exists(file)) {
                 return ResponseEntity.notFound().build();
             }
+            accessLog.event(AccessLog.Kind.DOWNLOAD, auth.getName(), http.getRemoteAddr(),
+                    book.title() + (book.author() == null ? "" : " · " + book.author()),
+                    book.extension().toUpperCase(java.util.Locale.ROOT) + ", " + (book.sizeBytes() / 1024) + " KB");
             String encodedName = URLEncoder.encode(book.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -85,8 +94,10 @@ public class BookController {
     }
 
     @PostMapping("/index/refresh")
-    public Map<String, Object> refresh() {
+    public Map<String, Object> refresh(Authentication auth, HttpServletRequest http) {
         catalog.refresh();
+        accessLog.event(AccessLog.Kind.REFRESH, auth.getName(), http.getRemoteAddr(),
+                "Biblioteca releída: " + catalog.size() + " libros");
         return status();
     }
 }

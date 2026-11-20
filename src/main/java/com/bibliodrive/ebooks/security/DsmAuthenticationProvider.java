@@ -10,6 +10,8 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
@@ -37,14 +39,20 @@ public class DsmAuthenticationProvider implements AuthenticationProvider {
 
     private static final Logger log = LoggerFactory.getLogger(DsmAuthenticationProvider.class);
 
+    /** Marca de las sesiones de cuentas del NAS: su rol se vuelve a mirar en cada peticion (GroupRolesFilter). */
+    public static final String DSM_ACCOUNT = "DSM_ACCOUNT";
+
     private final String baseUrl;
     private final HttpClient httpClient;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final DsmGroups groups;
 
     public DsmAuthenticationProvider(
             @Value("${dsm.base-url}") String baseUrl,
-            @Value("${dsm.connect-timeout-ms:3000}") long connectTimeoutMs) {
+            @Value("${dsm.connect-timeout-ms:3000}") long connectTimeoutMs,
+            DsmGroups groups) {
         this.baseUrl = baseUrl;
+        this.groups = groups;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
                 .build();
@@ -61,8 +69,23 @@ public class DsmAuthenticationProvider implements AuthenticationProvider {
         }
         logout(sid);
 
-        return new UsernamePasswordAuthenticationToken(username, password,
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        DsmGroups.Role role = groups.roleOf(username);
+        if (role == DsmGroups.Role.NONE) {
+            // Contraseña buena pero sin grupo: no se prueba con los usuarios locales
+            // (AccountStatusException corta el ProviderManager) ni cuenta como fallo
+            throw new DisabledException("La cuenta " + username + " no esta en los grupos de BiblioLocal");
+        }
+        return new UsernamePasswordAuthenticationToken(username, null, authoritiesFor(role));
+    }
+
+    public static List<GrantedAuthority> authoritiesFor(DsmGroups.Role role) {
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        if (role == DsmGroups.Role.ADMIN) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+        authorities.add(new SimpleGrantedAuthority(DSM_ACCOUNT));
+        return authorities;
     }
 
     private String login(String username, String password) {

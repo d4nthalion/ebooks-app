@@ -42,6 +42,12 @@ public class CatalogIndexService {
     private volatile Map<String, Book> booksById = Map.of();
     private volatile Map<String, EpubMetadataReader.CoverImage> coversById = Map.of();
     private volatile long lastIndexedAt = 0L;
+    private org.springframework.context.ApplicationEventPublisher events;
+
+    /** Se publica tras cada escaneo completo (las peticiones miran si ya ha llegado lo pedido). */
+    public record RefreshedEvent(int books) {
+    }
+
 
     public CatalogIndexService(
             @Value("${ebooks.root-path}") String rootPath,
@@ -56,9 +62,18 @@ public class CatalogIndexService {
         this.allowedExtensions = extensions;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setEvents(org.springframework.context.ApplicationEventPublisher events) {
+        this.events = events;
+    }
+
     @PostConstruct
     public void init() {
         refresh();
+    }
+
+    public Path rootPath() {
+        return rootPath;
     }
 
     @Scheduled(fixedDelayString = "${ebooks.auto-refresh-minutes}", timeUnit = TimeUnit.MINUTES)
@@ -98,6 +113,9 @@ public class CatalogIndexService {
         this.coversById = newCovers;
         this.lastIndexedAt = System.currentTimeMillis();
         log.info("Indexados {} libros desde {}", newBooks.size(), rootPath);
+        if (events != null) {
+            events.publishEvent(new RefreshedEvent(newBooks.size()));
+        }
     }
 
     private record Indexed(Book book, EpubMetadataReader.CoverImage cover) {
@@ -109,7 +127,9 @@ public class CatalogIndexService {
 
         String title = fileNameWithoutExtension(file);
         String author = inferAuthor(relative);
-        String series = inferSeries(relative);
+        // La saga solo sale del epub (Calibre o esta app), nunca del nombre de la
+        // carpeta: asi se edita a mano y una carpeta «Los Diablos» no inventa sagas
+        String series = null;
         String seriesIndex = null;
         EpubMetadataReader.CoverImage cover = null;
 
@@ -121,7 +141,6 @@ public class CatalogIndexService {
             if (meta.author() != null && !meta.author().isBlank()) {
                 author = meta.author();
             }
-            // La saga escrita en el epub (Calibre o esta app) manda sobre la carpeta
             if (meta.series() != null) {
                 series = meta.series();
                 seriesIndex = meta.seriesIndex();
@@ -248,14 +267,6 @@ public class CatalogIndexService {
             return relative.getName(0).toString();
         }
         return "Desconocido";
-    }
-
-    private String inferSeries(Path relative) {
-        int folders = relative.getNameCount() - 1;
-        if (folders >= 2) {
-            return relative.getName(folders - 1).toString();
-        }
-        return null;
     }
 
     private String hashOf(String value) {

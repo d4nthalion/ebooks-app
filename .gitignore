@@ -44,3 +44,7 @@ build/
 ### SO ###
 .DS_Store
 Thumbs.db
+
+### Datos de la app (peticiones, universos, registro) y secretos del NAS ###
+/data/
+/secrets.properties
